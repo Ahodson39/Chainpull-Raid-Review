@@ -352,6 +352,16 @@ const finalRender=render; render=()=>{finalRender(); const f=fights[fightIndex],
       const startLabel = document.createElement('span'); startLabel.textContent = '00:00'; startLabel.style.cssText = 'position:absolute;left:0;bottom:0;color:#afbcc8;font-size:12px';
       const endLabel = document.createElement('span'); endLabel.textContent = `${Math.floor((bins.length - 1) / 60).toString().padStart(2, '0')}:${((bins.length - 1) % 60).toString().padStart(2, '0')}`; endLabel.style.cssText = 'position:absolute;right:0;bottom:0;color:#afbcc8;font-size:12px';
       chart.append(startLabel, endLabel); pressureList.append(chart);
+      const durationSeconds = Math.max(0, bins.length - 1);
+      for (let second = 30; second < durationSeconds - 8; second += 30) {
+        const left = second / Math.max(1, durationSeconds) * 100;
+        const tick = document.createElement('span');
+        tick.style.cssText = `position:absolute;left:${left}%;bottom:19px;height:6px;border-left:1px solid #52616d;pointer-events:none`;
+        const label = document.createElement('span');
+        label.textContent = `${Math.floor(second / 60).toString().padStart(2, '0')}:${(second % 60).toString().padStart(2, '0')}`;
+        label.style.cssText = `position:absolute;left:${left}%;bottom:0;transform:translateX(-50%);color:#81909b;font-size:11px;pointer-events:none`;
+        chart.append(tick, label);
+      }
       const markers = [...(activeFight.phase_markers || []), ...(activeFight.timeline_events || [])];
       markers.forEach(marker => {
         const point = document.createElement('span');
