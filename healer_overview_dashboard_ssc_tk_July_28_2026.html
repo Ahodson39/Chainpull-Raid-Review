@@ -7,6 +7,7 @@
 .healer-workspace { grid-template-columns:minmax(270px,.7fr) minmax(0,1.3fr) }
 #overview > section.panel { margin-top:24px }
 #overview > #pressure-detail { margin-top:4px; border-color:#3b5364; box-shadow:0 -4px 0 rgba(87,182,220,.035) }
+#healing-review > .next-raid-planning { margin-top:28px; border-color:#49667a; background:linear-gradient(180deg,#1c2a36,#17212b); box-shadow:0 0 0 4px rgba(87,182,220,.04) }
 #detail { max-height:760px; overflow-y:auto; align-self:start }
 .review-tabs { display:flex; gap:8px; margin:18px 0 } .review-tab { border:1px solid var(--line); background:var(--panel); color:var(--muted); padding:9px 13px; border-radius:7px; cursor:pointer } .review-tab.active { color:var(--text); border-color:var(--accent); background:#233444 } #cooldown-review { margin-top:18px } .cooldown-table { font-size:14px } .cooldown-events { max-width:340px; color:var(--muted) }
 </style></head><body><main>
@@ -292,6 +293,23 @@ const finalRender=render; render=()=>{finalRender(); const f=fights[fightIndex],
       actionPanel.classList.add('next-raid-planning');
       document.querySelectorAll('#healing-review > .next-raid-planning').forEach(existing => existing.remove());
       document.querySelector('#healing-review').append(actionPanel);
+      const deathNames = (activeFight.deaths_detail || []).map(death => death.target);
+      const spikeNames = (activeFight.windows || []).slice(0, 2).map(window => window.context?.label || window.sources?.[0]?.ability).filter(Boolean);
+      const removalTypes = Object.entries(activeFight.dispel_comparison || {});
+      const dispelCasters = (activeFight.dispels_detail || []).reduce((counts, event) => { counts[event.caster] = (counts[event.caster] || 0) + 1; return counts; }, {});
+      const topDispellers = Object.entries(dispelCasters).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, count]) => `${name} (${count})`).join(', ');
+      const cleansePlan = removalTypes.length
+        ? `<article style="padding:13px;border:1px solid #2d3b49;border-radius:7px;background:#17212b"><h3 style="margin:0 0 7px">✦ Cleanse ownership</h3><p class="muted" style="margin:0">${activeFight.dispels_detail.length} removals logged: ${removalTypes.map(([type]) => type).join(', ')}. Observed ownership: ${topDispellers || 'none'}.</p><p class="muted" style="margin:8px 0 0">Confirm who owns each removal type before pull; capable players are shown in the Dispel review.</p></article>`
+        : '';
+      const assignmentMessage = activeFight._hasAssignmentOverride
+        ? 'This encounter uses its own saved healer assignments. Confirm targets and handoffs before pull.'
+        : 'This encounter inherits the raid-night defaults. Confirm whether it needs tank, raid, flex, or special-task changes.';
+      const noteKey = `healer-audit-${reportStorageKey}-planning-note-${activeFight.id}`;
+      const savedNote = localStorage.getItem(noteKey) || '';
+      actionPanel.innerHTML = `<h2>🗒 Next Raid Plan</h2><p class="muted">Use this closing checklist to turn the review into a clear plan for the next pull.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px"><article style="padding:13px;border:1px solid #2d3b49;border-radius:7px;background:#17212b"><h3 style="margin:0 0 7px">📜 Assignment decisions</h3><p class="muted" style="margin:0">${assignmentMessage}</p></article><article style="padding:13px;border:1px solid #2d3b49;border-radius:7px;background:#17212b"><h3 style="margin:0 0 7px">☠ Deaths to review</h3><p class="muted" style="margin:0">${deathNames.length ? `Review the final-ten-second packets for: ${deathNames.join(', ')}.` : 'No player deaths were recorded in this encounter.'}</p></article><article style="padding:13px;border:1px solid #2d3b49;border-radius:7px;background:#17212b"><h3 style="margin:0 0 7px">⚡ Damage-spike plan</h3><p class="muted" style="margin:0">${spikeNames.length ? `Choose healing coverage or cooldown plans for: ${spikeNames.join(' and ')}.` : 'No damage-spike sample is available for this encounter.'}</p></article>${cleansePlan}</div><label style="display:block;margin-top:16px"><strong>Leader planning note</strong><br><textarea id="next-raid-note" rows="3" placeholder="Optional assignment, cooldown, or positioning note for next week" style="width:100%;margin-top:6px;padding:9px;background:#10161d;color:#edf3f8;border:1px solid #2d3b49;border-radius:6px;resize:vertical"></textarea></label><p class="muted" style="margin:7px 0 0">Saved locally in this browser for this encounter.</p>`;
+      const noteField = actionPanel.querySelector('#next-raid-note');
+      noteField.value = savedNote;
+      noteField.oninput = () => localStorage.setItem(noteKey, noteField.value);
     }
     const iconHeadings = {'Death Timeline':'☠ Death Timeline', 'Damage-pressure moments':'⚡ Damage Spike Events', 'Encounter Selector':'◈ Encounter Selector', 'Dispel review':'✦ Dispel review'};
     document.querySelectorAll('#overview h2').forEach(heading => { if (iconHeadings[heading.textContent]) heading.textContent = iconHeadings[heading.textContent]; });
